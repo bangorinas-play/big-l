@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Big L</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        canvas {
+            display: block;
+        }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            border: 2px solid #00ffff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            display: none; /* Hidden by default */
+        }
+        .ui-panel {
+            position: absolute;
+            color: #00ffff;
+            background-color: rgba(0, 20, 20, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 15px #00ffff;
+        }
+        #info-panel {
+            top: 10px;
+            left: 10px;
+            width: 250px;
+        }
+        #mission-panel {
+            top: 10px;
+            right: 10px;
+            width: 300px;
+        }
+        .game-ui {
+             display: none; /* All game UI hidden by default */
+        }
+        h1, h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.5em;
+            text-shadow: 0 0 5px #ff00ff;
+        }
+        p {
+            margin: 5px 0;
+        }
+        #score {
+            font-size: 1.2em;
+            color: #ff00ff;
+            margin-top: 10px;
+        }
+        #health-bar-container {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 25px;
+            background-color: rgba(255, 0, 0, 0.3);
+            border: 2px solid #ff00ff;
+            border-radius: 5px;
+            padding: 2px;
+        }
+        #health-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            border-radius: 3px;
+            transition: width 0.2s ease-out;
+        }
+        .menu-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 10;
+        }
+        .menu-overlay h1 {
+            font-size: 5em;
+            color: #ff00ff;
+            text-shadow: 0 0 20px #ff00ff;
+        }
+         .menu-overlay h2 {
+            font-size: 3em;
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000;
+        }
+        .menu-button {
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 24px;
+            margin: 10px;
+            cursor: pointer;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+        .menu-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.8);
+        }
+        #main-menu { display: flex; }
+        #pause-menu { display: none; }
+        #game-over-menu { display: none; }
+        #you-win { color: #00ff00; text-shadow: 0 0 20px #00ff00; display: none;}
+         #gun-ui {
+            position: absolute;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            justify-content: center;
+            width: 1000px;
+            height: 1000px;
+            pointer-events: none;
+            transition: transform 0.2s ease-out;
+        }
+        #aiming {
+            transform: translateX(-150px) translateY(-50px) scale(0.8);
+        }
+        #isFiring {
+            transform: translateX(-120px) translateY(-50px) scale(0.8);
+        }
+        #gun-ui img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        #ammo-display {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            font-size: 2.5em;
+            color: #ff00ff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <!-- Game UI -->
+    <div id="crosshair"></div>
+    <div id="info-panel" class="ui-panel game-ui">
+        <h1>ALIEN ASSAULT</h1>
+        <p><strong>Controls:</strong></p>
+        <p><strong>W, A, S, D:</strong> Move</p>
+        <p><strong>Shift (Hold):</strong> Run</p>
+        <p><strong>Ctrl (Hold):</strong> Crouch</p>
+        <p><strong>Space:</strong> Jump</p>
+        <p><strong>LMB (Hold):</strong> Shoot</p>
+        <p><strong>RMB (Hold):</strong> Aim</p>
+        <p><strong>R:</strong> Reload</p>
+        <p><strong>Tab/Q:</strong> Pause</p>
+        <p id="score">SCORE: 0</p>
+    </div>
+     <div id="mission-panel" class="ui-panel game-ui">
+        <h2>OBJECTIVES</h2>
+        <p id="mission-shooters">Kill Alien Shooters: 0 / 10</p>
+        <p id="mission-drinks">Find Energy Drinks: 0 / 8</p>
+        <p id="mission-final" style="display: none; color: #00ff00;">All objectives complete! Get to the Supermarket!</p>
+    </div>
+    <div id="health-bar-container" class="game-ui">
+        <div id="health-bar"></div>
+    </div>
+    <div id="gun-ui" class="game-ui">
+        <img id="gun-image" src="https://bangorinas-play.github.io/PlayGameAssets/gunUIhand.png" alt="Gun UI">
+    </div>
+    <div id="ammo-display" class="game-ui">120 / 120</div>
+    <div id="you-win" class="menu-overlay"><h1>YOU WIN!</h1></div>
+
+    <!-- Menus -->
+    <div id="main-menu" class="menu-overlay">
+        <img src="https://bangorinas-play.github.io/PlayGameAssets/BigL.png" alt="Big L Logo" style="width: 300px; margin-bottom: 20px;">
+        <button id="start-button" class="menu-button">Start Game</button>
+    </div>
+    <div id="pause-menu" class="menu-overlay">
+        <img src="https://bangorinas-play.github.io/PlayGameAssets/pause.png" alt="Big L Logo" style="width: 300px; margin-bottom: 20px;">
+        <button id="resume-button" class="menu-button">Resume</button>
+        <button id="main-menu-button" class="menu-button">Main Menu</button>
+    </div>
+    <div id="game-over-menu" class="menu-overlay">
+        <img src="https://bangorinas-play.github.io/PlayGameAssets/loser.png" alt="Big L Logo" style="width: 300px; margin-bottom: 20px;">
+        <button id="try-again-button" class="menu-button">Try Again</button>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+            "three/addons/loaders/GLTFLoader.js": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        // --- GAME STATE & UI ---
+        let gameState = 'menu'; // 'menu', 'playing', 'paused', 'gameover', 'win'
+        const gameUiElements = document.querySelectorAll('.game-ui');
+        const crosshair = document.getElementById('crosshair');
+        const mainMenu = document.getElementById('main-menu');
+        const pauseMenu = document.getElementById('pause-menu');
+        const gameOverMenu = document.getElementById('game-over-menu');
+        const startButton = document.getElementById('start-button');
+        const resumeButton = document.getElementById('resume-button');
+        const mainMenuButton = document.getElementById('main-menu-button');
+        const tryAgainButton = document.getElementById('try-again-button');
+        const backgroundMusic = new Audio("https://bangorinas-play.github.io/PlayGameAssets/Mi sociedad.mp3");
+        const gunshotSfx = new Audio("https://bangorinas-play.github.io/PlayGameAssets/ak47.flac");
+        const reloadFX = new Audio("https://bangorinas-play.github.io/PlayGameAssets/reload.flac");
+
+        let score = 0;
+        const scoreElement = document.getElementById('score');
+        const healthBarElement = document.getElementById('health-bar');
+        const youWinElement = document.getElementById('you-win');
+        const ammoDisplayElement = document.getElementById('ammo-display');
+        const gunImageElement = document.getElementById('gun-image');
+        const gunUiElement = document.getElementById('gun-ui');
+        const gunIdleSrc = "https://bangorinas-play.github.io/PlayGameAssets/gunUIhand.png";
+        const gunReloadSrc = "https://bangorinas-play.github.io/PlayGameAssets/gunreloadfast.gif";
+        const gunAimSrc = "https://bangorinas-play.github.io/PlayGameAssets/gunUIaim0001.png";
+        const missionShootersElement = document.getElementById('mission-shooters');
+        const missionDrinksElement = document.getElementById('mission-drinks');
+        const missionFinalElement = document.getElementById('mission-final');
+        
+        const missionState = {
+            shootersKilled: 0,
+            shootersRequired: 10,
+            drinksFound: 0,
+            drinksRequired: 8,
+            allComplete: false
+        };
+
+        // --- SCENE SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Light sky blue
+        scene.fog = new THREE.Fog(0x87CEEB, 0, 150);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // --- LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // Soft white ambient light
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xfff8d6, 1.5); // Warm sunlight
+        directionalLight.position.set(50, 50, 25);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 500;
+        scene.add(directionalLight);
+
+        // --- WORLD ---
+        const groundSize = 200;
+        const mapBoundary = groundSize / 2 - 2;
+        const loader = new GLTFLoader();
+        let houseModel = null;
+        let energyDrinkModel = null;
+
+        loader.load('https://bangorinas-play.github.io/Bangorinas-models/Ground.glb', (gltf) => {
+            const groundModel = gltf.scene;
+            groundModel.scale.set(100, 100, 100);
+            groundModel.position.y = -9.5;
+            groundModel.traverse(node => { if (node.isMesh) node.receiveShadow = true; });
+            scene.add(groundModel);
+        });
+        
+        // --- BUILDING GENERATION & COLLISION ---
+        const supermarketMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, emissive: 0x555555, roughness: 0.6 });
+        const supermarketDoorMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, emissive: 0x00ffff });
+        const collidables = [];
+        let supermarketBox;
+
+        function createBuilding(position, isSupermarket = false) {
+            const group = new THREE.Group();
+            
+            if (isSupermarket) {
+                const baseWidth = 20, baseHeight = 40, baseDepth = 30;
+                const baseGeo = new THREE.BoxGeometry(baseWidth, baseHeight, baseDepth);
+                const base = new THREE.Mesh(baseGeo, supermarketMat);
+                base.position.y = baseHeight / 3;
+                base.castShadow = true; base.receiveShadow = true;
+                group.add(base);
+                const doorGeo = new THREE.BoxGeometry(5, 7, 0.5);
+                const door = new THREE.Mesh(doorGeo, supermarketDoorMat);
+                door.position.set(0, 3, baseDepth / 2 + 0.3);
+                group.add(door);
+            } else if (houseModel) {
+                const model = houseModel.clone();
+                model.scale.set(3, 3, 3);
+                model.position.y = -2
+                model.traverse(node => {
+                    if (node.isMesh) {
+                        node.castShadow = true;
+                        node.receiveShadow = true;
+                    }
+                });
+                group.add(model);
+            }
+
+            group.position.copy(position);
+            scene.add(group);
+            const box = new THREE.Box3().setFromObject(group);
+            if (isSupermarket) supermarketBox = box;
+            else collidables.push(box);
+        }
+
+        function populateCity() {
+            const streetWidth = 20; const housesPerSide = 5;
+            for (let i = 0; i < housesPerSide; i++) {
+                for (let j = 0; j < housesPerSide; j++) {
+                    const x = (i - Math.floor(housesPerSide / 2)) * streetWidth * 2;
+                    const z = (j - Math.floor(housesPerSide / 2)) * streetWidth * 2;
+                    if (x === 0 && z === 0) continue;
+                    createBuilding(new THREE.Vector3(x, 0, z));
+                }
+            }
+            createBuilding(new THREE.Vector3(80, 0, -80), true);
+        }
+
+        // --- ENERGY DRINK COLLECTIBLES ---
+        const energyDrinks = [];
+        function populateEnergyDrinks() {
+            for (let i = 0; i < missionState.drinksRequired; i++) {
+                if (energyDrinkModel) {
+                    const drink = energyDrinkModel.clone();
+                    drink.scale.set(0.5, 0.5, 0.5);
+                    drink.position.set((Math.random() - 0.5) * groundSize * 0.9, 0.5, (Math.random() - 0.5) * groundSize * 0.9);
+                    scene.add(drink);
+                    energyDrinks.push(drink);
+                }
+            }
+        }
+
+        // --- PLAYER SETUP ---
+        const player = new THREE.Group();
+        player.position.y = 1.8;
+        scene.add(player);
+        player.add(camera);
+        const playerBox = new THREE.Box3();
+        const playerState = { 
+            velocity: new THREE.Vector3(), onGround: false, speed: 10, jumpHeight: 8, health: 100, maxHealth: 100, 
+            isInvincible: false, ammo: 120, maxAmmo: 120, isReloading: false, isAiming: false, isFiring: false,
+            shootCooldown: 0, fireRate: 0.08
+        };
+        const gravity = -20;
+        const standingHeight = 1.8;
+        const crouchingHeight = 1.2;
+
+        // --- CONTROLS ---
+        const keys = {};
+        document.addEventListener('keydown', (e) => { 
+            keys[e.code] = true; 
+            if (e.code === 'KeyR' && !playerState.isReloading && playerState.ammo < playerState.maxAmmo) reload();
+            if ((e.code === 'Tab' || e.code === 'KeyQ') && (gameState === 'playing' || gameState === 'paused')) {
+                e.preventDefault();
+                togglePause();
+            }
+        });
+        document.addEventListener('keyup', (e) => keys[e.code] = false);
+        let isPointerLocked = false;
+        const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+        document.addEventListener('pointerlockchange', () => { isPointerLocked = document.pointerLockElement === document.body; });
+        document.addEventListener('mousemove', (e) => { if (!isPointerLocked) return; euler.y -= (e.movementX || 0) * 0.002; euler.x -= (e.movementY || 0) * 0.002; euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x)); });
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // --- SHOOTING, AIMING & RELOADING ---
+        const projectiles = [];
+        const projectileGeo = new THREE.SphereGeometry(0.1, 8, 8);
+        const projectileMat = new THREE.MeshBasicMaterial({ color: 0xff00ff, opacity: 0.2, transparent: true });
+
+        window.addEventListener('mousedown', (e) => {
+            if (!isPointerLocked) return;
+            if (e.button === 2) { playerState.isAiming = true; gunImageElement.src = gunAimSrc; camera.fov = 60; camera.updateProjectionMatrix(); }
+            if (e.button === 0) { playerState.isFiring = true; }
+        });
+        window.addEventListener('mouseup', (e) => { 
+            if (e.button === 2) { playerState.isAiming = false; gunImageElement.src = gunIdleSrc; camera.fov = 75; camera.updateProjectionMatrix(); }
+            if (e.button === 0) { playerState.isFiring = false; }
+        });
+
+        function handleShooting(deltaTime) {
+            if (playerState.shootCooldown > 0) playerState.shootCooldown -= deltaTime;
+            if (playerState.isFiring && !playerState.isReloading && playerState.ammo > 0 && playerState.shootCooldown <= 0) {
+                playerState.shootCooldown = playerState.fireRate;
+                playerState.ammo--; 
+                updateAmmoDisplay();
+                const projectile = new THREE.Mesh(projectileGeo, projectileMat);
+                const direction = new THREE.Vector3();
+                camera.getWorldDirection(direction);
+                if (playerState.isAiming) { projectile.position.copy(player.position).add(direction.clone().multiplyScalar(0.5)); } 
+                else { const offset = new THREE.Vector3(0.3, -0.25, 0); offset.applyQuaternion(camera.quaternion); projectile.position.copy(player.position).add(offset); }
+                projectile.velocity = direction.multiplyScalar(120);
+                projectiles.push(projectile); scene.add(projectile);
+                projectile.userData = { owner: 'player' };
+                projectile.addEventListener('collision', (event) => {
+                    if (event.detail.body.userData.owner === 'enemy') {
+                        event.detail.body.userData.health -= 10;
+                        if (event.detail.body.userData.health <= 0) {
+                            scene.remove(event.detail.body);
+                            enemies.splice(enemies.indexOf(event.detail.body), 1);
+                        }
+                    }
+                });
+
+                gunshotSfx.currentTime = 0;
+                gunshotSfx.play();
+
+                if (playerState.ammo === 0) reload();
+            }
+        }
+
+        function reload() { 
+            playerState.isReloading = true; 
+            reloadFX.play();
+            gunImageElement.src = gunReloadSrc; 
+            setTimeout(() => { playerState.ammo = playerState.maxAmmo; playerState.isReloading = false; gunImageElement.src = gunIdleSrc; updateAmmoDisplay(); }, 1500); 
+        }
+        function updateAmmoDisplay() { ammoDisplayElement.textContent = `${playerState.ammo} / ${playerState.maxAmmo}`; }
+
+        // --- ENEMY SETUP ---
+        const enemies = [];
+        const enemyProjectiles = [];
+        const hitMat = new THREE.MeshBasicMaterial({ color: 0xffffff, emissive: 0xffffff });
+        const enemyModels = { chaser: null, shooter: null };
+
+        function loadAssetModels() {
+            return new Promise((resolve) => {
+                let modelsLoaded = 0;
+                const totalModels = 4;
+                const onModelLoad = () => {
+                    modelsLoaded++;
+                    if (modelsLoaded === totalModels) resolve();
+                };
+                loader.load('https://bangorinas-play.github.io/Bangorinas-models/monster1.glb', (gltf) => { enemyModels.chaser = gltf.scene; onModelLoad(); });
+                loader.load('https://bangorinas-play.github.io/Bangorinas-models/monster2.glb', (gltf) => { enemyModels.shooter = gltf.scene; onModelLoad(); });
+                loader.load('https://bangorinas-play.github.io/Bangorinas-models/House.glb', (gltf) => { houseModel = gltf.scene; onModelLoad(); });
+                loader.load('https://bangorinas-play.github.io/Bangorinas-models/EnergyDrink.glb', (gltf) => { energyDrinkModel = gltf.scene; onModelLoad(); });
+            });
+        }
+
+        function spawnEnemy() {
+            const isShooter = Math.random() > 0.5;
+            const enemyType = isShooter ? 'shooter' : 'chaser';
+            
+            const model = enemyModels[enemyType].clone();
+            
+            const enemy = new THREE.Group();
+            enemy.add(model);
+            
+            model.scale.set(0.8, 0.8, 0.8);
+
+            enemy.position.set((Math.random() - 0.5) * groundSize * 0.9, 0, (Math.random() - 0.5) * groundSize * 0.9);
+            
+            enemy.health = isShooter ? 50 : 30;
+            enemy.type = enemyType;
+            enemy.ai = { speed: isShooter ? 12 : 1 + Math.random() * 2, direction: new THREE.Vector3(), shootCooldown: 0 };
+            enemy.box = new THREE.Box3();
+            enemy.model = model;
+            enemy.originalMaterials = {};
+            
+            model.traverse(node => {
+                if (node.isMesh) {
+                    node.castShadow = true;
+                    enemy.originalMaterials[node.uuid] = node.material;
+                }
+            });
+
+            enemies.push(enemy);
+            scene.add(enemy);
+        }
+
+        // --- GAME LOOP ---
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const deltaTime = clock.getDelta();
+            const time = clock.getElapsedTime();
+            if(gameState === 'playing') {
+                handleShooting(deltaTime);
+                updatePlayer(deltaTime);
+                updateProjectiles(deltaTime);
+                updateEnemies(deltaTime, time);
+                updateEnemyProjectiles(deltaTime);
+                updateCollectibles(deltaTime);
+                checkCollisions();
+            }
+            renderer.render(scene, camera);
+        }
+
+        function updatePlayer(deltaTime) {
+            camera.quaternion.setFromEuler(euler);
+            if (!playerState.onGround) playerState.velocity.y += gravity * deltaTime;
+            
+            const isCrouching = keys['ControlLeft'] || keys['ControlRight'];
+            const isSprinting = (keys['ShiftLeft'] || keys['ShiftRight']) && !isCrouching;
+            
+            let currentSpeed = playerState.speed;
+            if (isSprinting) currentSpeed *= 1.8;
+            if (isCrouching) currentSpeed *= 0.5;
+            
+            const targetHeight = isCrouching ? crouchingHeight : standingHeight;
+            player.position.y = THREE.MathUtils.lerp(player.position.y, targetHeight, 10 * deltaTime);
+
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            const moveDirection = new THREE.Vector3();
+            if (keys['KeyW']) moveDirection.add(forward); if (keys['KeyS']) moveDirection.sub(forward); if (keys['KeyA']) moveDirection.sub(right); if (keys['KeyD']) moveDirection.add(right);
+            if (moveDirection.length() > 0) {
+                moveDirection.normalize();
+                const moveVector = moveDirection.multiplyScalar(currentSpeed * deltaTime);
+                const oldX = player.position.x; player.position.x += moveVector.x;
+                playerBox.setFromCenterAndSize(player.position, new THREE.Vector3(1, targetHeight, 1));
+                for (const box of collidables) if (playerBox.intersectsBox(box)) player.position.x = oldX;
+                const oldZ = player.position.z; player.position.z += moveVector.z;
+                playerBox.setFromCenterAndSize(player.position, new THREE.Vector3(1, targetHeight, 1));
+                for (const box of collidables) if (playerBox.intersectsBox(box)) player.position.z = oldZ;
+            }
+            if (keys['Space'] && playerState.onGround && !isCrouching) { playerState.velocity.y = playerState.jumpHeight; playerState.onGround = false; }
+            player.position.addScaledVector(playerState.velocity, deltaTime);
+            if (player.position.y <= targetHeight) {
+                player.position.y = targetHeight;
+                playerState.velocity.y = 0;
+                playerState.onGround = true;
+            }
+            
+            player.position.x = Math.max(-mapBoundary, Math.min(mapBoundary, player.position.x));
+            player.position.z = Math.max(-mapBoundary, Math.min(mapBoundary, player.position.z));
+        }
+        
+        function updateProjectiles(deltaTime) {
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i]; p.position.addScaledVector(p.velocity, deltaTime);
+                if (p.position.distanceTo(player.position) > 200) { scene.remove(p); projectiles.splice(i, 1); }
+            }
+        }
+        
+        function updateEnemies(deltaTime, time) {
+            enemies.forEach(enemy => {
+                enemy.ai.direction.subVectors(player.position, enemy.position).normalize();
+                const moveVector = enemy.ai.direction.clone().multiplyScalar(enemy.ai.speed * deltaTime);
+                const oldX = enemy.position.x; enemy.position.x += moveVector.x;
+                enemy.box.setFromObject(enemy);
+                for (const box of collidables) if (enemy.box.intersectsBox(box)) enemy.position.x = oldX;
+                const oldZ = enemy.position.z; enemy.position.z += moveVector.z;
+                enemy.box.setFromObject(enemy);
+                for (const box of collidables) if (enemy.box.intersectsBox(box)) enemy.position.z = oldZ;
+                
+                enemy.model.rotation.y += 0.02;
+
+                enemy.position.y = 3 + Math.sin(time * 2 + enemy.uuid.length) * 0.5;
+
+                enemy.position.x = Math.max(-mapBoundary, Math.min(mapBoundary, enemy.position.x));
+                enemy.position.z = Math.max(-mapBoundary, Math.min(mapBoundary, enemy.position.z));
+
+                if (enemy.type === 'shooter') {
+                    enemy.ai.shootCooldown -= deltaTime;
+                    if (enemy.ai.shootCooldown <= 0 && enemy.position.distanceTo(player.position) < 80) {
+                        const enemyProjectile = new THREE.Mesh(projectileGeo, new THREE.MeshBasicMaterial({color: 0xffaa00}));
+                        const spawnPos = new THREE.Vector3().setFromMatrixPosition(enemy.model.matrixWorld);
+                        enemyProjectile.position.copy(spawnPos);
+                        enemyProjectile.velocity = enemy.ai.direction.multiplyScalar(30);
+                        enemyProjectiles.push(enemyProjectile);
+                        scene.add(enemyProjectile);
+                        enemy.ai.shootCooldown = 2 + Math.random();
+                    }
+                }
+            });
+        }
+
+        function updateEnemyProjectiles(deltaTime) {
+             for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+                const p = enemyProjectiles[i]; p.position.addScaledVector(p.velocity, deltaTime);
+                if (p.position.distanceTo(player.position) > 200) { scene.remove(p); enemyProjectiles.splice(i, 1); }
+            }
+        }
+
+        function updateCollectibles(deltaTime) {
+            const time = clock.getElapsedTime();
+            energyDrinks.forEach(drink => {
+                drink.rotation.y += deltaTime * 2;
+                drink.position.y = 0.5 + Math.sin(time * 3 + drink.uuid.length) * 0.2;
+            });
+        }
+        
+        function checkCollisions() {
+            // Player Projectile vs Enemy
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const e = enemies[j];
+                    e.box.setFromObject(e.model);
+                    if (e.box.containsPoint(p.position)) {
+                        scene.remove(p); projectiles.splice(i, 1);
+                        e.health -= 10; 
+                        
+                        e.model.traverse(node => { if(node.isMesh) node.material = hitMat; });
+                        setTimeout(() => { 
+                            e.model.traverse(node => { 
+                                if(node.isMesh) node.material = e.originalMaterials[node.uuid];
+                            });
+                        }, 100);
+
+                        if (e.health <= 0) {
+                            if (e.type === 'shooter') { missionState.shootersKilled++; }
+                            scene.remove(e); enemies.splice(j, 1);
+                            score += e.type === 'shooter' ? 50 : 10;
+                            scoreElement.textContent = `SCORE: ${score}`;
+                            updateMissionDisplay();
+                            setTimeout(spawnEnemy, 2000);
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            // Enemy Projectile vs Player
+            for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+                const p = enemyProjectiles[i];
+                if (p.position.distanceTo(player.position) < 1.5) {
+                    scene.remove(p); enemyProjectiles.splice(i, 1);
+                    if (playerState.isInvincible) continue;
+                    playerState.health -= 10;
+                    healthBarElement.style.width = `${(playerState.health / playerState.maxHealth) * 100}%`;
+                    playerState.isInvincible = true;
+                    setTimeout(() => { playerState.isInvincible = false; }, 500);
+                    if (playerState.health <= 0) gameOver();
+                    break;
+                }
+            }
+
+            // Player vs Enemy Chaser
+            if (playerState.isInvincible) return;
+            for (const enemy of enemies) {
+                if (enemy.type === 'chaser' && player.position.distanceTo(enemy.position) < 1.5) {
+                    playerState.health -= 20; healthBarElement.style.width = `${(playerState.health / playerState.maxHealth) * 100}%`;
+                    playerState.isInvincible = true; setTimeout(() => { playerState.isInvincible = false; }, 1000);
+                    if (playerState.health <= 0) gameOver();
+                    break;
+                }
+            }
+
+            // Player vs Energy Drink
+            for (let i = energyDrinks.length - 1; i >= 0; i--) {
+                const drink = energyDrinks[i];
+                const dx = player.position.x - drink.position.x;
+                const dz = player.position.z - drink.position.z;
+                if (dx * dx + dz * dz < 1) {
+                    scene.remove(drink);
+                    energyDrinks.splice(i, 1);
+                    missionState.drinksFound++;
+                    updateMissionDisplay();
+                }
+            }
+
+            // Player vs Supermarket
+            playerBox.setFromCenterAndSize(player.position, new THREE.Vector3(1, player.position.y * 2, 1));
+            if (missionState.allComplete && playerBox.intersectsBox(supermarketBox)) {
+                winGame();
+            }
+        }
+
+        function updateMissionDisplay() {
+            missionShootersElement.textContent = `Kill Alien Shooters: ${missionState.shootersKilled} / ${missionState.shootersRequired}`;
+            missionDrinksElement.textContent = `Find Energy Drinks: ${missionState.drinksFound} / ${missionState.drinksRequired}`;
+            if (missionState.shootersKilled >= missionState.shootersRequired && missionState.drinksFound >= missionState.drinksRequired && !missionState.allComplete) {
+                missionState.allComplete = true;
+                missionFinalElement.style.display = 'block';
+            }
+        }
+
+        function resetGame() {
+            location.reload();
+        }
+
+        function gameOver() { 
+            gameState = 'gameover';
+            gameOverMenu.style.display = 'flex';
+            document.exitPointerLock();
+            hideGameUI();
+        }
+        function winGame() { 
+            gameState = 'win';
+            youWinElement.style.display = 'flex';
+            document.exitPointerLock();
+            hideGameUI();
+            setTimeout(resetGame, 5000);
+        }
+
+        function hideGameUI() {
+            gameUiElements.forEach(el => el.style.display = 'none');
+            crosshair.style.display = 'none';
+        }
+
+        function showGameUI() {
+            gameUiElements.forEach(el => el.style.display = 'block');
+            crosshair.style.display = 'block';
+        }
+
+        function togglePause() {
+            if (gameState === 'playing') {
+                gameState = 'paused';
+                pauseMenu.style.display = 'flex';
+                document.exitPointerLock();
+            } else if (gameState === 'paused') {
+                gameState = 'playing';
+                pauseMenu.style.display = 'none';
+                document.body.requestPointerLock();
+            }
+        }
+
+        // --- MENU EVENT LISTENERS ---
+        startButton.addEventListener('click', () => {
+            mainMenu.style.display = 'none';
+            showGameUI();
+            document.body.requestPointerLock();
+            gameState = 'playing';
+            
+         // Start the music!
+            backgroundMusic.volume = 0.3; // Set a reasonable volume
+            backgroundMusic.play();
+        });
+
+        resumeButton.addEventListener('click', togglePause);
+        mainMenuButton.addEventListener('click', resetGame);
+        tryAgainButton.addEventListener('click', resetGame);
+
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+        
+        // --- INITIALIZE GAME ---
+        loadAssetModels().then(() => {
+            populateCity();
+            populateEnergyDrinks();
+            for (let i = 0; i < 20; i++) spawnEnemy();
+            animate();
+        });
+    </script>
+</body>
+</html>
